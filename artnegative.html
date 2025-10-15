@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art Negative</title>
+<style>
+  * {margin: 0; padding: 0; box-sizing: border-box;}
+  body {
+    height: 100vh;
+    background: linear-gradient(180deg, #1a1a1a, #000);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow-x: scroll;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+  }
+  .slide {
+    flex: 0 0 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    scroll-snap-align: center;
+    position: relative;
+  }
+  img, video {
+    max-width: 92%;
+    max-height: 92%;
+    object-fit: contain;
+    border-radius: 16px;
+    box-shadow: 0 0 30px rgba(255,255,255,0.1);
+  }
+  video {
+    background: #000;
+  }
+  .dots {
+    position: absolute;
+    bottom: 25px;
+    width: 100%;
+    text-align: center;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: inline-block;
+    margin: 0 4px;
+    transition: 0.25s;
+  }
+  .dot.active {
+    background: rgba(255,255,255,0.95);
+    transform: scale(1.15);
+  }
+</style>
+</head>
+<body>
+<div class="container" id="gallery">
+  <div class="slide">
+    <img src="art1.jpg" alt="Art Image">
+  </div>
+  <div class="slide">
+    <video autoplay playsinline controlslist="nodownload" onplay="this.muted=false">
+      <source src="artvid.mp4" type="video/mp4">
+    </video>
+  </div>
+</div>
+
+<div class="dots" id="dots">
+  <span class="dot active"></span>
+  <span class="dot"></span>
+</div>
+
+<script>
+  const container = document.getElementById('gallery');
+  const dots = document.querySelectorAll('.dot');
+  container.addEventListener('scroll', () => {
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === index);
+    });
+  });
+</script>
+</body>
+</html>
