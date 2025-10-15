@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Art Negative</title>
+  <style>
+    :root{
+      --bg1: #121216;
+      --bg2: #050507;
+      --dot-size: 6px;
+      --dot-gap: 8px;
+      --media-max-w: 70vw;
+      --media-max-h: 70vh;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background: radial-gradient(800px 400px at 10% 20%, rgba(124,92,255,0.03), transparent),
+                  linear-gradient(180deg, rgba(18,18,20,0.6), rgba(5,5,7,0.95));
+      background-color: #000;
+      color:#fff;
+      font-family: Inter, Poppins, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      overflow:hidden;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      touch-action: pan-y;
+    }
+
+    /* centered gallery frame */
+    .frame {
+      width:100%;
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 4vh 0;
+    }
+
+    .viewport {
+      width: min(var(--media-max-w), 1200px);
+      height: min(var(--media-max-h), 800px);
+      max-width: 92vw;
+      max-height: 92vh;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: 14px;
+      overflow: hidden;
+      display:block;
+      position: relative;
+      box-shadow: 0 30px 80px rgba(2,6,12,0.65);
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+
+    /* slider */
+    .slider {
+      display:flex;
+      height:100%;
+      width:100%;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+    }
+    .slider::-webkit-scrollbar { display:none; }
+
+    .slide {
+      flex: 0 0 100%;
+      height:100%;
+      scroll-snap-align: center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: transparent;
+      position: relative;
+      padding: 24px;
+    }
+
+    .media {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      border-radius: 8px;
+      object-fit: contain;
+      display:block;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      background: #000;
+    }
+
+    /* small dots */
+    .dots {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display:flex;
+      gap: var(--dot-gap);
+      z-index: 40;
+    }
+    .dot {
+      width: var(--dot-size);
+      height: var(--dot-size);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      transition: transform .18s ease, background .18s ease, opacity .18s ease;
+      opacity: 0.95;
+    }
+    .dot.active { transform: scale(1.15); background: rgba(255,255,255,0.95); opacity: 1; }
+
+    /* subtle hint overlay (hidden after first interaction) */
+    .hint {
+      position: absolute;
+      bottom: 58px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.65);
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(4px);
+      z-index: 30;
+      transition: opacity .3s ease;
+    }
+    .hint.hidden { opacity: 0; pointer-events: none; }
+
+    /* responsiveness */
+    @media (max-width:720px){
+      :root{ --media-max-w: 96vw; --media-max-h: 80vh; }
+      .hint{ font-size:12px; bottom: 68px }
+      .frame{ padding: 3vh 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="viewport" id="viewport">
+      <div class="slider" id="slider" role="list">
+        <div class="slide" role="listitem">
+          <img class="media" src="art1.jpg" alt="Art slide 1">
+        </div>
+        <div class="slide" role="listitem">
+          <video class="media" src="vid1.mp4" playsinline controlslist="nodownload" preload="metadata"></video>
+        </div>
+      </div>
+
+      <div class="dots" id="dots" aria-hidden="true"></div>
+      <div class="hint" id="hint">Geser kanan atau kiri untuk melihat</div>
+    </div>
+  </div>
+
+  <script>
+    // Elements
+    const slider = document.getElementById('slider');
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const dotsWrap = document.getElementById('dots');
+    const hint = document.getElementById('hint');
+    let isInteracted = false;
+
+    // build dots
+    slides.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i === 0 ? ' active' : '');
+      dotsWrap.appendChild(d);
+    });
+    const dots = Array.from(dotsWrap.children);
+
+    // helper: current index based on scroll
+    function currentIndex(){
+      return Math.round(slider.scrollLeft / slider.clientWidth);
+    }
+
+    // on scroll - update dots and play/pause videos
+    let ticking = false;
+    slider.addEventListener('scroll', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const idx = currentIndex();
+          dots.forEach((dot, i) => dot.classList.toggle('active', i === idx));
+          handleVideoPlayback(idx);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }, { passive: true });
+
+    // ensure correct on load
+    window.addEventListener('load', () => {
+      dots.forEach((dot, i) => dot.classList.toggle('active', i === currentIndex()));
+      handleVideoPlayback(currentIndex());
+    });
+
+    // play/pause logic using IntersectionObserver for robustness
+    function handleVideoPlayback(visibleIndex){
+      slides.forEach((s, i) => {
+        const vid = s.querySelector('video');
+        if (!vid) return;
+        if (i === visibleIndex) {
+          // attempt to play with sound; browsers may block autoplay with sound
+          vid.muted = false;
+          const p = vid.play();
+          if (p !== undefined) {
+            p.catch(() => {
+              // fallback: play muted, and wait for user gesture to unmute
+              vid.muted = true;
+              vid.play().catch(() => {});
+            });
+          }
+        } else {
+          vid.pause();
+          vid.currentTime = 0;
+        }
+      });
+    }
+
+    // If autoplay with sound is blocked, unmute on first user interaction (swipe/tap)
+    function onFirstGesture(){
+      if (isInteracted) return;
+      isInteracted = true;
+      hint.classList.add('hidden');
+      // try unmuting visible video
+      const idx = currentIndex();
+      const vid = slides[idx].querySelector('video');
+      if (vid && vid.muted) {
+        vid.muted = false;
+        vid.play().catch(() => {});
+      }
+    }
+    // listen for gestures
+    ['touchstart', 'pointerdown', 'mousedown'].forEach(ev => {
+      window.addEventListener(ev, onFirstGesture, { once: true, passive: true });
+    });
+
+    // allow drag-to-scroll on desktop (nice UX)
+    let isDown = false, startX, scrollLeft;
+    slider.addEventListener('pointerdown', (e) => {
+      isDown = true;
+      slider.classList.add('dragging');
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+    });
+    slider.addEventListener('pointerup', () => { isDown = false; slider.classList.remove('dragging'); });
+    slider.addEventListener('pointerleave', () => { isDown = false; slider.classList.remove('dragging'); });
+    slider.addEventListener('pointermove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - slider.offsetLeft;
+      const walk = (x - startX);
+      slider.scrollLeft = scrollLeft - walk;
+    });
+
+    // small accessibility: keyboard arrows
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') {
+        slider.scrollBy({ left: slider.clientWidth, behavior: 'smooth' });
+      } else if (e.key === 'ArrowLeft') {
+        slider.scrollBy({ left: -slider.clientWidth, behavior: 'smooth' });
+      }
+    });
+
+    // resize: adjust dots active
+    window.addEventListener('resize', () => {
+      dots.forEach((dot, i) => dot.classList.toggle('active', i === currentIndex()));
+    });
+  </script>
+</body>
+</html>
